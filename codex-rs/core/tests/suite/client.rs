@@ -249,7 +249,7 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
             let text = item
                 .get("content")
                 .and_then(|c| c.as_array())
-                .and_then(|a| a.get(0))
+                .and_then(|a| a.first())
                 .and_then(|o| o.get("text"))
                 .and_then(|t| t.as_str())
                 .unwrap_or("");
