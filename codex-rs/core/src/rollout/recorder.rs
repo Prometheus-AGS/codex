@@ -135,6 +135,7 @@ impl RolloutRecorder {
             file,
             conversation_id: session_id,
             timestamp,
+            path,
         } = create_log_file(config, conversation_id)?;
 
         let timestamp_format: &[FormatItem] = format_description!(
