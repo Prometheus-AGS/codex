@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::AuthManager;
 use crate::CodexAuth;
 use crate::rollout::RolloutItem;
+use crate::rollout::recorder::RolloutItemSliceExt;
 use codex_protocol::mcp_protocol::ConversationId;
 use tokio::sync::RwLock;
 
@@ -25,6 +26,24 @@ use codex_protocol::models::ResponseItem;
 pub enum InitialHistory {
     New,
     Resumed(Vec<RolloutItem>),
+}
+
+impl InitialHistory {
+    /// Return all response items contained in this initial history.
+    pub fn get_response_items(&self) -> Vec<ResponseItem> {
+        match self {
+            InitialHistory::New => Vec::new(),
+            InitialHistory::Resumed(items) => items.as_slice().get_response_items(),
+        }
+    }
+
+    /// Return all events contained in this initial history.
+    pub fn get_events(&self) -> Vec<crate::protocol::Event> {
+        match self {
+            InitialHistory::New => Vec::new(),
+            InitialHistory::Resumed(items) => items.as_slice().get_events(),
+        }
+    }
 }
 
 /// Represents a newly created Codex conversation, including the first event
