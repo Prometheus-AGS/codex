@@ -1060,13 +1060,7 @@ mod tests {
 
     #[test]
     fn test_shell_tool_for_sandbox_workspace_write() {
-        let sandbox_policy = SandboxPolicy::WorkspaceWrite {
-            writable_roots: vec!["workspace".into()],
-            network_access: false,
-            exclude_tmpdir_env_var: false,
-            exclude_slash_tmp: false,
-        };
-        let tool = super::create_shell_tool_for_sandbox(&sandbox_policy);
+        let tool = super::create_shell_tool_for_sandbox();
         let OpenAiTool::Function(ResponsesApiTool {
             description, name, ..
         }) = &tool
@@ -1076,28 +1070,53 @@ mod tests {
         assert_eq!(name, "shell");
 
         let expected = r#"
-The shell tool is used to execute shell commands.
-- When invoking the shell tool, your call will be running in a sandbox, and some shell commands will require escalated privileges:
-  - Types of actions that require escalated privileges:
-    - Writing files other than those in the writable roots
-      - writable roots:
-        - workspace
-    - Commands that require network access
+The shell tool executes shell commands inside a Landlock-style sandbox. Some operations may require escalated permissions depending on the *effective sandbox policy* (communicated separately at runtime).
 
-  - Examples of commands that require escalated privileges:
-    - git commit
-    - npm install or pnpm install
-    - cargo build
-    - cargo test
-- When invoking a command that will require escalated privileges:
-  - Provide the with_escalated_permissions parameter with the boolean value true
-  - Include a short, 1 sentence explanation for why we need to run with_escalated_permissions in the justification parameter."#;
+POLICY REFERENCE (names + descriptions)
+- SandboxPolicy::ReadOnly
+  - Description: Filesystem is read-only; no writes allowed. Some operations (including applying patches) are blocked unless escalated.
+  - Implications: Writing any file, applying patches, modifying VCS state, running installers/builds that write to disk will require escalation.
+
+- SandboxPolicy::WorkspaceWrite { network_access: bool }
+  - Description: Write access allowed within the current workspace (CWD), but writes outside CWD and to protected paths require escalation. Network availability depends on `network_access`.
+  - Implications:
+    - Escalation required for: reading/writing outside CWD; writing to protected paths (e.g., `.git`, `.env`).
+    - If `network_access == false`, commands needing the internet (e.g., `npm install` fetching packages) also require escalation.
+
+- SandboxPolicy::DangerFullAccess
+  - Description: Broadly permissive. Commands typically run without sandbox restrictions.
+  - Implications: Escalation is usually unnecessary, but may still be requested for sensitive operations if desired.
+
+OPERATIONS THAT OFTEN REQUIRE ESCALATION
+- Reading files outside the current working directory (CWD).
+- Writing files outside CWD, or to protected paths like `.git` or `.env`.
+- Applying patches (e.g., `apply_patch`).
+- Package installation (e.g., `npm install`, `pnpm install`).
+- Builds and tests that write to disk (e.g., `cargo build`, `cargo test`).
+- Git commands modifying repository state (e.g., `git commit`).
+- Any network operation when the policy disallows networking.
+
+HOW TO REQUEST ESCALATION
+- Set `with_escalated_permissions = true`.
+- Provide a one-sentence `justification` explaining why escalation is required
+  (e.g., “Needs to write to .git for commit”, “Requires network to fetch dependencies”, “Writes outside CWD”).
+
+EXAMPLES (commonly escalated)
+- `apply_patch`
+- `git commit`
+- `npm install` / `pnpm install`
+- `cargo build` / `cargo test`
+
+GUIDANCE
+- If unsure whether a command will be blocked, prefer setting `with_escalated_permissions=true` with a clear justification.
+- The effective policy (ReadOnly / WorkspaceWrite{network_access} / DangerFullAccess) is provided separately; the above reference tells you how each policy behaves.
+"#;
         assert_eq!(description, expected);
     }
 
     #[test]
     fn test_shell_tool_for_sandbox_readonly() {
-        let tool = super::create_shell_tool_for_sandbox(&SandboxPolicy::ReadOnly);
+        let tool = super::create_shell_tool_for_sandbox();
         let OpenAiTool::Function(ResponsesApiTool {
             description, name, ..
         }) = &tool
@@ -1107,26 +1126,53 @@ The shell tool is used to execute shell commands.
         assert_eq!(name, "shell");
 
         let expected = r#"
-The shell tool is used to execute shell commands.
-- When invoking the shell tool, your call will be running in a sandbox, and some shell commands (including apply_patch) will require escalated permissions:
-  - Types of actions that require escalated privileges:
-    - Writing files
-    - Applying patches
-  - Examples of commands that require escalated privileges:
-    - apply_patch
-    - git commit
-    - npm install or pnpm install
-    - cargo build
-    - cargo test
-- When invoking a command that will require escalated privileges:
-  - Provide the with_escalated_permissions parameter with the boolean value true
-  - Include a short, 1 sentence explanation for why we need to run with_escalated_permissions in the justification parameter"#;
+The shell tool executes shell commands inside a Landlock-style sandbox. Some operations may require escalated permissions depending on the *effective sandbox policy* (communicated separately at runtime).
+
+POLICY REFERENCE (names + descriptions)
+- SandboxPolicy::ReadOnly
+  - Description: Filesystem is read-only; no writes allowed. Some operations (including applying patches) are blocked unless escalated.
+  - Implications: Writing any file, applying patches, modifying VCS state, running installers/builds that write to disk will require escalation.
+
+- SandboxPolicy::WorkspaceWrite { network_access: bool }
+  - Description: Write access allowed within the current workspace (CWD), but writes outside CWD and to protected paths require escalation. Network availability depends on `network_access`.
+  - Implications:
+    - Escalation required for: reading/writing outside CWD; writing to protected paths (e.g., `.git`, `.env`).
+    - If `network_access == false`, commands needing the internet (e.g., `npm install` fetching packages) also require escalation.
+
+- SandboxPolicy::DangerFullAccess
+  - Description: Broadly permissive. Commands typically run without sandbox restrictions.
+  - Implications: Escalation is usually unnecessary, but may still be requested for sensitive operations if desired.
+
+OPERATIONS THAT OFTEN REQUIRE ESCALATION
+- Reading files outside the current working directory (CWD).
+- Writing files outside CWD, or to protected paths like `.git` or `.env`.
+- Applying patches (e.g., `apply_patch`).
+- Package installation (e.g., `npm install`, `pnpm install`).
+- Builds and tests that write to disk (e.g., `cargo build`, `cargo test`).
+- Git commands modifying repository state (e.g., `git commit`).
+- Any network operation when the policy disallows networking.
+
+HOW TO REQUEST ESCALATION
+- Set `with_escalated_permissions = true`.
+- Provide a one-sentence `justification` explaining why escalation is required
+  (e.g., “Needs to write to .git for commit”, “Requires network to fetch dependencies”, “Writes outside CWD”).
+
+EXAMPLES (commonly escalated)
+- `apply_patch`
+- `git commit`
+- `npm install` / `pnpm install`
+- `cargo build` / `cargo test`
+
+GUIDANCE
+- If unsure whether a command will be blocked, prefer setting `with_escalated_permissions=true` with a clear justification.
+- The effective policy (ReadOnly / WorkspaceWrite{network_access} / DangerFullAccess) is provided separately; the above reference tells you how each policy behaves.
+"#;
         assert_eq!(description, expected);
     }
 
     #[test]
     fn test_shell_tool_for_sandbox_danger_full_access() {
-        let tool = super::create_shell_tool_for_sandbox(&SandboxPolicy::DangerFullAccess);
+        let tool = super::create_shell_tool_for_sandbox();
         let OpenAiTool::Function(ResponsesApiTool {
             description, name, ..
         }) = &tool
@@ -1135,6 +1181,48 @@ The shell tool is used to execute shell commands.
         };
         assert_eq!(name, "shell");
 
-        assert_eq!(description, "Runs a shell command and returns its output.");
+        let expected = r#"
+The shell tool executes shell commands inside a Landlock-style sandbox. Some operations may require escalated permissions depending on the *effective sandbox policy* (communicated separately at runtime).
+
+POLICY REFERENCE (names + descriptions)
+- SandboxPolicy::ReadOnly
+  - Description: Filesystem is read-only; no writes allowed. Some operations (including applying patches) are blocked unless escalated.
+  - Implications: Writing any file, applying patches, modifying VCS state, running installers/builds that write to disk will require escalation.
+
+- SandboxPolicy::WorkspaceWrite { network_access: bool }
+  - Description: Write access allowed within the current workspace (CWD), but writes outside CWD and to protected paths require escalation. Network availability depends on `network_access`.
+  - Implications:
+    - Escalation required for: reading/writing outside CWD; writing to protected paths (e.g., `.git`, `.env`).
+    - If `network_access == false`, commands needing the internet (e.g., `npm install` fetching packages) also require escalation.
+
+- SandboxPolicy::DangerFullAccess
+  - Description: Broadly permissive. Commands typically run without sandbox restrictions.
+  - Implications: Escalation is usually unnecessary, but may still be requested for sensitive operations if desired.
+
+OPERATIONS THAT OFTEN REQUIRE ESCALATION
+- Reading files outside the current working directory (CWD).
+- Writing files outside CWD, or to protected paths like `.git` or `.env`.
+- Applying patches (e.g., `apply_patch`).
+- Package installation (e.g., `npm install`, `pnpm install`).
+- Builds and tests that write to disk (e.g., `cargo build`, `cargo test`).
+- Git commands modifying repository state (e.g., `git commit`).
+- Any network operation when the policy disallows networking.
+
+HOW TO REQUEST ESCALATION
+- Set `with_escalated_permissions = true`.
+- Provide a one-sentence `justification` explaining why escalation is required
+  (e.g., “Needs to write to .git for commit”, “Requires network to fetch dependencies”, “Writes outside CWD”).
+
+EXAMPLES (commonly escalated)
+- `apply_patch`
+- `git commit`
+- `npm install` / `pnpm install`
+- `cargo build` / `cargo test`
+
+GUIDANCE
+- If unsure whether a command will be blocked, prefer setting `with_escalated_permissions=true` with a clear justification.
+- The effective policy (ReadOnly / WorkspaceWrite{network_access} / DangerFullAccess) is provided separately; the above reference tells you how each policy behaves.
+"#;
+        assert_eq!(description, expected);
     }
 }

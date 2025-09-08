@@ -983,41 +983,54 @@ async fn history_dedupes_streamed_and_final_messages_across_turns() {
     assert_eq!(actual_tail[0]["type"], serde_json::json!("message"));
     assert_eq!(actual_tail[0]["role"], serde_json::json!("user"));
     let env_text_1 = &actual_tail[0]["content"][0]["text"];
-    assert!(env_text_1
-        .as_str()
-        .expect("env text should be string")
-        .contains("<environment_context>"));
+    assert!(
+        env_text_1
+            .as_str()
+            .expect("env text should be string")
+            .contains("<environment_context>")
+    );
 
     // U2
-    assert_eq!(actual_tail[1], serde_json::json!({
-        "type": "message",
-        "id": serde_json::Value::Null,
-        "role": "user",
-        "content": [ { "type": "input_text", "text": "U2" } ]
-    }));
+    assert_eq!(
+        actual_tail[1],
+        serde_json::json!({
+            "type": "message",
+            "id": serde_json::Value::Null,
+            "role": "user",
+            "content": [ { "type": "input_text", "text": "U2" } ]
+        })
+    );
 
     // assistant response
-    assert_eq!(actual_tail[2], serde_json::json!({
-        "type": "message",
-        "id": serde_json::Value::Null,
-        "role": "assistant",
-        "content": [ { "type": "output_text", "text": "Hey there!\n" } ]
-    }));
+    assert_eq!(
+        actual_tail[2],
+        serde_json::json!({
+            "type": "message",
+            "id": serde_json::Value::Null,
+            "role": "assistant",
+            "content": [ { "type": "output_text", "text": "Hey there!\n" } ]
+        })
+    );
 
     // env_ctx 2
     assert_eq!(actual_tail[3]["type"], serde_json::json!("message"));
     assert_eq!(actual_tail[3]["role"], serde_json::json!("user"));
     let env_text_2 = &actual_tail[3]["content"][0]["text"];
-    assert!(env_text_2
-        .as_str()
-        .expect("env text should be string")
-        .contains("<environment_context>"));
+    assert!(
+        env_text_2
+            .as_str()
+            .expect("env text should be string")
+            .contains("<environment_context>")
+    );
 
     // U3
-    assert_eq!(actual_tail[4], serde_json::json!({
-        "type": "message",
-        "id": serde_json::Value::Null,
-        "role": "user",
-        "content": [ { "type": "input_text", "text": "U3" } ]
-    }));
+    assert_eq!(
+        actual_tail[4],
+        serde_json::json!({
+            "type": "message",
+            "id": serde_json::Value::Null,
+            "role": "user",
+            "content": [ { "type": "input_text", "text": "U3" } ]
+        })
+    );
 }
