@@ -967,7 +967,6 @@ async fn history_dedupes_streamed_and_final_messages_across_turns() {
     assert_eq!(requests.len(), 3, "expected 3 requests (one per turn)");
 
     // Replace full-array compare with tail-only raw JSON compare using a single hard-coded value.
->>>>>>> 9a265731 (tests)
     let r3_input_array = requests[2]
         .body_json::<serde_json::Value>()
         .unwrap()

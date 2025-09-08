@@ -271,7 +271,6 @@ GUIDANCE
 - If unsure whether a command will be blocked, prefer setting `with_escalated_permissions=true` with a clear justification.
 - The effective policy (ReadOnly / WorkspaceWrite{network_access} / DangerFullAccess) is provided separately; the above reference tells you how each policy behaves.
 "#.to_string();
->>>>>>> 5ca22856 (patch)
 
     OpenAiTool::Function(ResponsesApiTool {
         name: "shell".to_string(),
