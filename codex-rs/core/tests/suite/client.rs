@@ -123,14 +123,6 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
     let tmpdir = TempDir::new().unwrap();
     let session_path = tmpdir.path().join("resume-session.jsonl");
     let mut f = std::fs::File::create(&session_path).unwrap();
-    // First line: meta (content not used by reader other than non-empty)
-    writeln!(
-        f,
-        "{}",
-        serde_json::json!({"meta":"test","instructions":"be nice"})
-    )
-    .unwrap();
-
     // Prior item: user message (should be delivered)
     let prior_user = codex_protocol::models::ResponseItem::Message {
         id: None,
@@ -139,7 +131,17 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
             text: "resumed user message".to_string(),
         }],
     };
-    writeln!(f, "{}", serde_json::to_string(&prior_user).unwrap()).unwrap();
+    let mut prior_user_obj = serde_json::to_value(&prior_user)
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .clone();
+    prior_user_obj.insert("record_type".to_string(), serde_json::json!("response"));
+    prior_user_obj.insert(
+        "timestamp".to_string(),
+        serde_json::json!("2025-01-01T00:00:00.000+00:00"),
+    );
+    writeln!(f, "{}", serde_json::Value::Object(prior_user_obj)).unwrap();
 
     // Prior item: system message (excluded from API history)
     let prior_system = codex_protocol::models::ResponseItem::Message {
@@ -149,7 +151,17 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
             text: "resumed system instruction".to_string(),
         }],
     };
-    writeln!(f, "{}", serde_json::to_string(&prior_system).unwrap()).unwrap();
+    let mut prior_system_obj = serde_json::to_value(&prior_system)
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .clone();
+    prior_system_obj.insert("record_type".to_string(), serde_json::json!("response"));
+    prior_system_obj.insert(
+        "timestamp".to_string(),
+        serde_json::json!("2025-01-01T00:00:00.000+00:00"),
+    );
+    writeln!(f, "{}", serde_json::Value::Object(prior_system_obj)).unwrap();
 
     // Prior item: assistant message
     let prior_item = codex_protocol::models::ResponseItem::Message {
@@ -159,11 +171,22 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
             text: "resumed assistant message".to_string(),
         }],
     };
-    writeln!(f, "{}", serde_json::to_string(&prior_item).unwrap()).unwrap();
+    let mut prior_item_obj = serde_json::to_value(&prior_item)
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .clone();
+    prior_item_obj.insert("record_type".to_string(), serde_json::json!("response"));
+    prior_item_obj.insert(
+        "timestamp".to_string(),
+        serde_json::json!("2025-01-01T00:00:00.000+00:00"),
+    );
+    writeln!(f, "{}", serde_json::Value::Object(prior_item_obj)).unwrap();
     let prior_item_event = EventMsg::AgentMessage(AgentMessageEvent {
         message: "resumed assistant message".to_string(),
     });
     let prior_event_line = serde_json::json!({
+        "timestamp": "2025-01-01T00:00:00.000+00:00",
         "record_type": "event",
         "id": "resume-1",
         "msg": prior_item_event,
