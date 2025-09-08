@@ -304,7 +304,6 @@ async fn prefixes_context_and_instructions_once_and_consistently_across_requests
     });
     let expected_env_msg_turn = serde_json::json!({
         "type": "message",
-        "id": serde_json::Value::Null,
         "role": "user",
         "content": [ { "type": "input_text", "text": expected_env_text_turn } ]
     });
@@ -339,7 +338,7 @@ async fn prefixes_context_and_instructions_once_and_consistently_across_requests
     let expected_body2 = serde_json::json!(
         [
             body1["input"].as_array().unwrap().as_slice(),
-            [expected_user_message_2].as_slice(),
+            [expected_env_msg_turn, expected_user_message_2].as_slice(),
         ]
         .concat()
     );
@@ -576,7 +575,6 @@ async fn per_turn_overrides_keep_cached_prefix_and_key_constant() {
     );
     let expected_env_msg_2 = serde_json::json!({
         "type": "message",
-        "id": serde_json::Value::Null,
         "role": "user",
         "content": [ { "type": "input_text", "text": expected_env_text_2 } ]
     });

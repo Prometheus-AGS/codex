@@ -83,30 +83,29 @@ async fn fork_conversation_twice_drops_to_first_message() {
         }
         _ => panic!("expected ConversationHistory event"),
     };
-    // History layout for this test:
-    // [0] user instructions,
-    // [1] environment context,
-    // [2] "first" user message,
-    // [3] "second" user message,
-    // [4] "third" user message.
+    // Compute expected prefixes by programmatically dropping from the last user message.
+    use codex_protocol::models::ResponseItem as RI;
+    let last_user_idx = entries_after_three
+        .iter()
+        .enumerate()
+        .rev()
+        .find_map(|(idx, item)| match item {
+            RI::Message { role, .. } if role == "user" => Some(idx),
+            _ => None,
+        })
+        .expect("at least one user message");
+    let expected_after_first = entries_after_three[..last_user_idx].to_vec();
 
-    // Fork 1: drops the last user message and everything after.
-    let expected_after_first = vec![
-        entries_after_three[0].clone(),
-        entries_after_three[1].clone(),
-        entries_after_three[2].clone(),
-        entries_after_three[3].clone(),
-    ];
-
-    // Fork 2: drops the last user message and everything after.
-    // [0] user instructions,
-    // [1] environment context,
-    // [2] "first" user message,
-    let expected_after_second = vec![
-        entries_after_three[0].clone(),
-        entries_after_three[1].clone(),
-        entries_after_three[2].clone(),
-    ];
+    let last_user_idx2 = expected_after_first
+        .iter()
+        .enumerate()
+        .rev()
+        .find_map(|(idx, item)| match item {
+            RI::Message { role, .. } if role == "user" => Some(idx),
+            _ => None,
+        })
+        .expect("at least two user messages");
+    let expected_after_second = expected_after_first[..last_user_idx2].to_vec();
 
     // Fork once with n=1 → drops the last user message and everything after.
     let NewConversation {

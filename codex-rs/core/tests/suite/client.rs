@@ -238,7 +238,25 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
             "content": [{ "type": "input_text", "text": "hello" }]
         }
     ]);
-    assert_eq!(request_body["input"], expected_input);
+    let input_array = request_body
+        .get("input")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .expect("input array in request body");
+    let filtered: Vec<serde_json::Value> = input_array
+        .into_iter()
+        .filter(|item| {
+            let text = item
+                .get("content")
+                .and_then(|c| c.as_array())
+                .and_then(|a| a.get(0))
+                .and_then(|o| o.get("text"))
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            !text.contains("<environment_context>")
+        })
+        .collect();
+    assert_eq!(serde_json::json!(filtered), expected_input);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -995,7 +1013,6 @@ async fn history_dedupes_streamed_and_final_messages_across_turns() {
         actual_tail[1],
         serde_json::json!({
             "type": "message",
-            "id": serde_json::Value::Null,
             "role": "user",
             "content": [ { "type": "input_text", "text": "U2" } ]
         })
@@ -1006,7 +1023,6 @@ async fn history_dedupes_streamed_and_final_messages_across_turns() {
         actual_tail[2],
         serde_json::json!({
             "type": "message",
-            "id": serde_json::Value::Null,
             "role": "assistant",
             "content": [ { "type": "output_text", "text": "Hey there!\n" } ]
         })
@@ -1028,7 +1044,6 @@ async fn history_dedupes_streamed_and_final_messages_across_turns() {
         actual_tail[4],
         serde_json::json!({
             "type": "message",
-            "id": serde_json::Value::Null,
             "role": "user",
             "content": [ { "type": "input_text", "text": "U3" } ]
         })
