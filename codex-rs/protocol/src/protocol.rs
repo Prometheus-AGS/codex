@@ -786,12 +786,10 @@ pub struct WebSearchEndEvent {
     pub query: String,
 }
 
-/// Response payload for `Op::GetHistory` containing the current session's
-/// in-memory transcript.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ConversationPathResponseEvent {
     pub conversation_id: ConversationId,
-    pub entries: Vec<ResponseItem>,
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
